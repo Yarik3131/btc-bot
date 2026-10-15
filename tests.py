@@ -1,7 +1,29 @@
 import unittest
-from strategy import ema, rsi, atr, calc_position
+from strategy import (ema, rsi, atr, calc_position, interval_to_ms, filter_closed_candles)
 
 class StrategyTests(unittest.TestCase):
+    def test_interval_to_ms(self):
+        self.assertEqual(interval_to_ms("15"), 900_000)
+        self.assertEqual(interval_to_ms("60"), 3_600_000)
+        self.assertEqual(interval_to_ms("D"), 86_400_000)
+        with self.assertRaises(ValueError):
+            interval_to_ms("unknown")
+
+    def test_only_closed_candles_are_kept(self):
+        candles = [
+            {"time": 0, "close": 10},
+            {"time": 900_000, "close": 11},
+            {"time": 1_800_000, "close": 12},
+        ]
+        result = filter_closed_candles(
+            candles, interval_ms=900_000, now_ms=1_800_000
+        )
+        self.assertEqual([c["close"] for c in result], [10, 11])
+
+    def test_filter_rejects_invalid_interval(self):
+        with self.assertRaises(ValueError):
+            filter_closed_candles([], interval_ms=0, now_ms=1000)
+
     def test_ema_length(self):
         values=list(range(1,31))
         self.assertEqual(len(ema(values,10)),30)

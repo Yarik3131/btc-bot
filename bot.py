@@ -8,6 +8,11 @@ ROOT = Path(__file__).resolve().parent
 CFG = json.loads((ROOT / "config.json").read_text())
 
 def run_once():
+    if CFG.get("paper_mode") is not True:
+        raise RuntimeError(
+            "Safety stop: this project supports signal/paper mode only; "
+            "set paper_mode=true in config.json."
+        )
     candles15 = fetch_klines(CFG["symbol"], CFG["category"], CFG["interval_signal"], 300)
     candles1h = fetch_klines(CFG["symbol"], CFG["category"], CFG["interval_trend"], 300)
     sig = generate_signal(candles15, candles1h, CFG)

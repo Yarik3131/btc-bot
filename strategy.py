@@ -1,6 +1,32 @@
-import requests, math
+import requests, math, time
 
 BASE_URL = "https://api.bybit.com"
+
+
+def interval_to_ms(interval):
+    """Convert a Bybit candle interval to milliseconds."""
+    value = str(interval).strip().upper()
+    if value.isdigit():
+        minutes = int(value)
+        if minutes <= 0:
+            raise ValueError("Candle interval must be positive")
+        return minutes * 60_000
+    units = {"D": 86_400_000, "W": 604_800_000}
+    if value in units:
+        return units[value]
+    raise ValueError(f"Unsupported candle interval: {interval}")
+
+
+def filter_closed_candles(candles, interval_ms, now_ms=None):
+    """Keep candles whose closing time has already passed."""
+    if interval_ms <= 0:
+        raise ValueError("interval_ms must be positive")
+    if now_ms is None:
+        now_ms = int(time.time() * 1000)
+    return [
+        c for c in candles
+        if int(c["time"]) + interval_ms <= now_ms
+    ]
 
 def fetch_klines(symbol, category, interval, limit=300):
     url = BASE_URL + "/v5/market/kline"
@@ -13,10 +39,11 @@ def fetch_klines(symbol, category, interval, limit=300):
         raise RuntimeError(payload.get("retMsg", "Bybit API error"))
     # Bybit returns newest first; strategy needs oldest first.
     rows = list(reversed(payload["result"]["list"]))
-    return [{
+    candles = [{
         "time": int(x[0]), "open": float(x[1]), "high": float(x[2]),
         "low": float(x[3]), "close": float(x[4]), "volume": float(x[5])
     } for x in rows]
+    return filter_closed_candles(candles, interval_to_ms(interval))
 
 def ema(values, period):
     if len(values) < period:
