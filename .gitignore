@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*secret*
+*credentials*
+*api_key*
+*private_key*
+backtest_trades.csv
